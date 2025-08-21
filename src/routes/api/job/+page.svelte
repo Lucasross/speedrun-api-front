@@ -26,8 +26,8 @@
 
 	async function deleteJob() {
 		if (!selectedJob) return;
-		await api.delete(`/jobs/${selectedJob.id}`);
-		jobs = jobs.filter((j) => j.id !== selectedJob!.id);
+		await api.delete(`/jobs/${selectedJob._id}`);
+		jobs = jobs.filter((j) => j._id !== selectedJob!._id);
 		selectedJob = null;
 	}
 
