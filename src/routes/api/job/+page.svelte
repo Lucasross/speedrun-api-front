@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import api from '../../../lib/api'; // ton axios configuré
 	import { isAuthenticated } from '$lib/stores/auth';
+	import { Tooltip } from 'flowbite-svelte';
 
 	type Job = {
 		id: number;
@@ -106,6 +107,10 @@
 		return Object.keys(job.stats);
 	}
 
+	function statOf(key: string): Stat | undefined {
+		return stats.find((s) => s.name === key);
+	}
+
 	$: isCommonGood = totalCommon >= 150 && totalCommon <= 180;
 	$: isPowerGood = totalPhyMagReg >= 180 && totalPhyMagReg <= 205;
 	$: isAllGood = isCommonGood && isPowerGood;
@@ -208,6 +213,7 @@
 				{#each getEntries(selectedJob).slice(6, 16) as key}
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-32 lg:w-64">{key}:</span>
+						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
 						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
@@ -220,6 +226,7 @@
 					<!-- enlève le dernier -->
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-32 lg:w-64">{key}:</span>
+						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
 						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
@@ -232,6 +239,7 @@
 					<!-- enlève le dernier -->
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-32 lg:w-64">{key}:</span>
+						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
 						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
@@ -244,6 +252,7 @@
 					<!-- enlève le dernier -->
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-32 lg:w-64">{key}:</span>
+						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
 						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
@@ -266,6 +275,7 @@
 						{#if value > 0}
 							<div class="flex flex-row gap-2">
 								<span class="font-semibold w-48 lg:w-32">{key}:</span>
+								<Tooltip type="light">{statOf(key)?.description}</Tooltip>
 								<span>{value}</span>
 							</div>
 						{/if}
@@ -278,6 +288,7 @@
 						{#if value > 0}
 							<div class="flex flex-row gap-2">
 								<span class="font-semibold w-48">{key}:</span>
+								<Tooltip type="light">{statOf(key)?.description}</Tooltip>
 								<span>{value}</span>
 							</div>
 						{/if}
