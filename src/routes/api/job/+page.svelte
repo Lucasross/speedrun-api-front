@@ -256,19 +256,19 @@
 		{#if activeTab === 5}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				<div class="flex flex-col gap-2">
-					<div class="flex flex-col md:flex-row gap-2 items-center">
-						<span class="font-semibold w-32">Name:</span>
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-48 lg:w-32">Name:</span>
 						<span>{selectedJob.name}</span>
 					</div>
-					<div class="flex flex-col md:flex-row gap-2 items-center">
-						<span class="font-semibold w-32">Description:</span>
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-48 lg:w-32">Description:</span>
 						<span>{selectedJob.description}</span>
 					</div>
 					<!-- Les 6 premiers éléments -->
 					{#each Object.entries(selectedJob.stats).slice(6, 16) as [key, value]}
 						{#if value > 0}
-							<div class="flex flex-col md:flex-row gap-2 items-center">
-								<span class="font-semibold w-32">{key}:</span>
+							<div class="flex flex-row gap-2">
+								<span class="font-semibold w-48 lg:w-32">{key}:</span>
 								<span>{value}</span>
 							</div>
 						{/if}
@@ -279,7 +279,7 @@
 					<!-- Le reste des éléments filtrés -->
 					{#each Object.entries(selectedJob.stats).slice(16) as [key, value]}
 						{#if value > 0}
-							<div class="flex flex-col md:flex-row gap-2 items-center">
+							<div class="flex flex-row gap-2">
 								<span class="font-semibold w-48">{key}:</span>
 								<span>{value}</span>
 							</div>
