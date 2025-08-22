@@ -2,21 +2,62 @@
 	import { onMount } from 'svelte';
 	import api from '../../../lib/api'; // ton axios configuré
 	import { isAuthenticated } from '$lib/stores/auth';
+	import { Tooltip } from 'flowbite-svelte';
 
 	type Job = {
 		id: number;
 		name: string;
-		[key: string]: any; // autres champs dynamiques
+		description: string;
+		stats: Record<string, number>;
+		[key: string]: any;
+	};
+
+	type Stat = {
+		name: string;
+		description: string;
+		type: string;
+		weight: number;
+		defaultValue: number;
 	};
 
 	let jobs: Job[] = [];
+	let stats: Stat[] = [];
 	let selectedJob: Job | null = null;
 	let activeTab = 0;
 
+	// Total pondéré
+	$: totalCommon = selectedJob
+		? Object.entries(selectedJob.stats).reduce((sum, [key, val]) => {
+				const stat = stats.find((s) => s.name === key);
+
+				if (stat?.type === 'common') {
+					const weight = stat ? stat.weight : 1;
+					return sum + val * weight;
+				}
+
+				return sum;
+			}, 0)
+		: 0;
+
+	$: totalPhyMagReg = selectedJob
+		? Object.entries(selectedJob.stats).reduce((sum, [key, val]) => {
+				const stat = stats.find((s) => s.name === key);
+
+				if (['physical', 'magic', 'regeneration'].includes(stat!.type)) {
+					const weight = stat ? stat.weight : 1;
+					return sum + val * weight;
+				}
+
+				return sum;
+			}, 0)
+		: 0;
+
 	// Récupérer les jobs
 	onMount(async () => {
-		const res = await api.get('/jobs');
-		jobs = res.data;
+		const jobRes = await api.get('/jobs');
+		jobs = jobRes.data;
+		const statRes = await api.get('/stats');
+		stats = statRes.data;
 	});
 
 	// Sélection d’un job
@@ -33,7 +74,6 @@
 
 	async function updateJob() {
 		if (!selectedJob) return;
-    console.log(selectedJob._id)
 		await api.put(`/jobs/${selectedJob._id}`, selectedJob);
 		alert('Job mis à jour !');
 	}
@@ -50,24 +90,30 @@
 	}
 
 	function createEmptyJob(): Job {
-		const newJob: Job = { id: -1, name: '' };
+		const defaultStats = stats.reduce(
+			(acc, stat) => {
+				acc[stat.name] = stat.defaultValue ?? 0;
+				return acc;
+			},
+			{} as Record<string, number>
+		);
 
-		const firstJob = jobs[0];
-
-		Object.keys(firstJob)
-			.slice(1, -1)
-			.forEach((key) => {
-				if (!(key in newJob)) {
-					newJob[key] = typeof firstJob[key] === 'number' ? 0 : '';
-				}
-			});
+		const newJob: Job = { id: -1, name: '', description: '', stats: defaultStats };
 
 		return newJob;
 	}
 
 	function getEntries(job: Job) {
-		return Object.entries(job).slice(1); // skip la 1ère entrée
+		return Object.keys(job.stats);
 	}
+
+	function statOf(key: string): Stat | undefined {
+		return stats.find((s) => s.name === key);
+	}
+
+	$: isCommonGood = totalCommon >= 150 && totalCommon <= 180;
+	$: isPowerGood = totalPhyMagReg >= 180 && totalPhyMagReg <= 205;
+	$: isAllGood = isCommonGood && isPowerGood;
 </script>
 
 <!-- Grid des jobs -->
@@ -95,7 +141,17 @@
 <!-- Détails -->
 {#if selectedJob}
 	<div class="mt-6 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
-		<h2 class="text-xl font-bold mb-4">Détails du Job</h2>
+		<div class="flex justify-between items-center">
+			<h2 class="text-xl font-bold">Détails du Job</h2>
+			<div class="flex flex-col items-start">
+				<span class={`text-lg font-semibold ${!isCommonGood ? 'text-red-500' : 'text-green-500'}`}>
+					Common: {totalCommon} (150 - 180)
+				</span>
+				<span class={`text-lg font-semibold ${!isPowerGood ? 'text-red-500' : 'text-green-500'}`}>
+					Power: {totalPhyMagReg} (180 - 205)
+				</span>
+			</div>
+		</div>
 
 		<!-- Tabs -->
 		<div class="grid lg:flex border-b mb-4">
@@ -129,27 +185,36 @@
 			>
 				Regeneration
 			</button>
+			<button
+				class={`px-4 cursor-pointer py-2 ${activeTab === 5 ? 'border-b-2 border-blue-500 font-bold' : ''}`}
+				on:click={() => (activeTab = 5)}
+			>
+				Summary
+			</button>
 		</div>
 
 		<!-- Onglet 1 -->
 		{#if activeTab === 0}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(0, 12) as [key, value]}
-					<div class="flex flex-col lg:flex-row gap-2">
-						<span class="font-semibold lg:w-64">{key}:</span>
-						<input class="border p-1 flex-1 rounded" bind:value={selectedJob[key]} />
-					</div>
-				{/each}
+				<div class="flex flex-row gap-2">
+					<span class="font-semibold lg:w-64">Name:</span>
+					<input class="border p-1 flex-1 rounded" bind:value={selectedJob.name} />
+				</div>
+				<div class="flex flex-row gap-2">
+					<span class="font-semibold lg:w-64">Description:</span>
+					<input class="border p-1 flex-1 rounded" bind:value={selectedJob.description} />
+				</div>
 			</div>
 		{/if}
 
 		<!-- Onglet 2 -->
 		{#if activeTab === 1}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(12, 20) as [key, value]}
-					<div class="flex flex-col lg:flex-row gap-2">
-						<span class="font-semibold lg:w-64">{key}:</span>
-						<input class="border p-1 flex-1 rounded" bind:value={selectedJob[key]} />
+				{#each getEntries(selectedJob).slice(6, 16) as key}
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-32 lg:w-64">{key}:</span>
+						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
 			</div>
@@ -157,11 +222,12 @@
 
 		{#if activeTab === 2}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(20, 34) as [key, value]}
+				{#each getEntries(selectedJob).slice(16, 30) as key}
 					<!-- enlève le dernier -->
-					<div class="flex flex-col lg:flex-row gap-2">
-						<span class="font-semibold lg:w-64">{key}:</span>
-						<input class="border p-1 flex-1 rounded" bind:value={selectedJob[key]} />
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-32 lg:w-64">{key}:</span>
+						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
 			</div>
@@ -169,11 +235,12 @@
 
 		{#if activeTab === 3}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(34, 62) as [key, value]}
+				{#each getEntries(selectedJob).slice(30, 60) as key}
 					<!-- enlève le dernier -->
-					<div class="flex flex-col lg:flex-row gap-2">
-						<span class="font-semibold lg:w-64">{key}:</span>
-						<input class="border p-1 flex-1 rounded" bind:value={selectedJob[key]} />
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-32 lg:w-64">{key}:</span>
+						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
 			</div>
@@ -181,13 +248,52 @@
 
 		{#if activeTab === 4}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(62, -1) as [key, value]}
+				{#each getEntries(selectedJob).slice(60) as key}
 					<!-- enlève le dernier -->
-					<div class="flex flex-col lg:flex-row gap-2">
-						<span class="font-semibold lg:w-64">{key}:</span>
-						<input class="border p-1 flex-1 rounded" bind:value={selectedJob[key]} />
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-32 lg:w-64">{key}:</span>
+						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
+			</div>
+		{/if}
+
+		{#if activeTab === 5}
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+				<div class="flex flex-col gap-2">
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-48 lg:w-32">Name:</span>
+						<span>{selectedJob.name}</span>
+					</div>
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-48 lg:w-32">Description:</span>
+						<span>{selectedJob.description}</span>
+					</div>
+					<!-- Les 6 premiers éléments -->
+					{#each Object.entries(selectedJob.stats).slice(6, 16) as [key, value]}
+						{#if value > 0}
+							<div class="flex flex-row gap-2">
+								<span class="font-semibold w-48 lg:w-32">{key}:</span>
+								<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+								<span>{value}</span>
+							</div>
+						{/if}
+					{/each}
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<!-- Le reste des éléments filtrés -->
+					{#each Object.entries(selectedJob.stats).slice(16) as [key, value]}
+						{#if value > 0}
+							<div class="flex flex-row gap-2">
+								<span class="font-semibold w-48">{key}:</span>
+								<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+								<span>{value}</span>
+							</div>
+						{/if}
+					{/each}
+				</div>
 			</div>
 		{/if}
 
@@ -202,14 +308,16 @@
 				</button>
 				{#if selectedJob.id !== -1}
 					<button
-						class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600"
+						class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={!isAllGood}
 						on:click={updateJob}
 					>
 						Update
 					</button>
 				{:else}
 					<button
-						class="px-4 py-2 bg-green-500 text-white rounded cursor-pointer hover:bg-blue-600"
+						class="px-4 py-2 bg-green-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={!isAllGood}
 						on:click={createJob}
 					>
 						Create
