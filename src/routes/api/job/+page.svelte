@@ -73,7 +73,6 @@
 
 	async function updateJob() {
 		if (!selectedJob) return;
-		console.log(selectedJob._id);
 		await api.put(`/jobs/${selectedJob._id}`, selectedJob);
 		alert('Job mis à jour !');
 	}
@@ -141,12 +140,10 @@
 			<h2 class="text-xl font-bold">Détails du Job</h2>
 			<div class="flex flex-col items-start">
 				<span class={`text-lg font-semibold ${!isCommonGood ? 'text-red-500' : 'text-green-500'}`}>
-					Common: {totalCommon}
-					{#if !isCommonGood}(150 - 180){/if}
+					Common: {totalCommon} (150 - 180)
 				</span>
 				<span class={`text-lg font-semibold ${!isPowerGood ? 'text-red-500' : 'text-green-500'}`}>
-					Power: {totalPhyMagReg}
-					{#if !isPowerGood}(180 - 205){/if}
+					Power: {totalPhyMagReg} (180 - 205)
 				</span>
 			</div>
 		</div>
@@ -194,11 +191,11 @@
 		<!-- Onglet 1 -->
 		{#if activeTab === 0}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				<div class="flex flex-col lg:flex-row gap-2">
+				<div class="flex flex-row gap-2">
 					<span class="font-semibold lg:w-64">Name:</span>
 					<input class="border p-1 flex-1 rounded" bind:value={selectedJob.name} />
 				</div>
-				<div class="flex flex-col lg:flex-row gap-2">
+				<div class="flex flex-row gap-2">
 					<span class="font-semibold lg:w-64">Description:</span>
 					<input class="border p-1 flex-1 rounded" bind:value={selectedJob.description} />
 				</div>
@@ -209,8 +206,8 @@
 		{#if activeTab === 1}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				{#each getEntries(selectedJob).slice(6, 16) as key}
-					<div class="flex flex-col lg:flex-row gap-2">
-						<span class="font-semibold lg:w-64">{key}:</span>
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-32 lg:w-64">{key}:</span>
 						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
@@ -219,10 +216,10 @@
 
 		{#if activeTab === 2}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(16, 34) as key}
+				{#each getEntries(selectedJob).slice(16, 30) as key}
 					<!-- enlève le dernier -->
-					<div class="flex flex-col lg:flex-row gap-2">
-						<span class="font-semibold lg:w-64">{key}:</span>
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-32 lg:w-64">{key}:</span>
 						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
@@ -231,10 +228,10 @@
 
 		{#if activeTab === 3}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(34, 60) as key}
+				{#each getEntries(selectedJob).slice(30, 60) as key}
 					<!-- enlève le dernier -->
-					<div class="flex flex-col lg:flex-row gap-2">
-						<span class="font-semibold lg:w-64">{key}:</span>
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-32 lg:w-64">{key}:</span>
 						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
@@ -245,8 +242,8 @@
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				{#each getEntries(selectedJob).slice(60) as key}
 					<!-- enlève le dernier -->
-					<div class="flex flex-col lg:flex-row gap-2">
-						<span class="font-semibold lg:w-64">{key}:</span>
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-32 lg:w-64">{key}:</span>
 						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
 					</div>
 				{/each}
