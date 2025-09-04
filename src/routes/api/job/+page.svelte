@@ -16,12 +16,24 @@
 		name: string;
 		description: string;
 		type: string;
+		usages: string[];
 		weight: number;
 		defaultValue: number;
 	};
 
+	type Skill = {
+		_id: string;
+		name: string;
+		description: string;
+		type: 'single' | 'multi' | 'passive' | 'buff' | 'active';
+		level: number;
+		stats: Record<string, number>;
+		job: string;
+	};
+
 	let jobs: Job[] = [];
 	let stats: Stat[] = [];
+	let skills: Skill[] = [];
 	let selectedJob: Job | null = null;
 	let activeTab = 0;
 
@@ -29,6 +41,8 @@
 	$: totalCommon = selectedJob
 		? Object.entries(selectedJob.stats).reduce((sum, [key, val]) => {
 				const stat = stats.find((s) => s.name === key);
+
+				if (!stat) return sum;
 
 				if (stat?.type === 'common') {
 					const weight = stat ? stat.weight : 1;
@@ -43,7 +57,9 @@
 		? Object.entries(selectedJob.stats).reduce((sum, [key, val]) => {
 				const stat = stats.find((s) => s.name === key);
 
-				if (['physical', 'magic', 'regeneration'].includes(stat!.type)) {
+				if (!stat) return sum;
+
+				if (['physical', 'magic', 'regeneration'].includes(stat.type)) {
 					const weight = stat ? stat.weight : 1;
 					return sum + val * weight;
 				}
@@ -56,13 +72,16 @@
 	onMount(async () => {
 		const jobRes = await api.get('/jobs');
 		jobs = jobRes.data;
+
 		const statRes = await api.get('/stats');
-		stats = statRes.data;
+		stats = statRes.data.filter((obj: { usages: string[] }) => obj.usages.includes('job'));
 	});
 
 	// Sélection d’un job
-	function selectJob(job: Job) {
+	async function selectJob(job: Job) {
 		selectedJob = job;
+		const skillRes = await api.get(`/jobs/${selectedJob._id}/skills`);
+		skills = skillRes.data;
 	}
 
 	async function deleteJob() {
@@ -142,7 +161,7 @@
 {#if selectedJob}
 	<div class="mt-6 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
 		<div class="flex justify-between items-center">
-			<h2 class="text-xl font-bold">Détails du Job</h2>
+			<h2 class="text-xl font-bold">{selectedJob.name}</h2>
 			<div class="flex flex-col items-start">
 				<span class={`text-lg font-semibold ${!isCommonGood ? 'text-red-500' : 'text-green-500'}`}>
 					Common: {totalCommon} (150 - 180)
@@ -260,39 +279,55 @@
 		{/if}
 
 		{#if activeTab === 5}
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				<div class="flex flex-col gap-2">
-					<div class="flex flex-row gap-2">
-						<span class="font-semibold w-48 lg:w-32">Name:</span>
-						<span>{selectedJob.name}</span>
+			<div>
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+					<div class="flex flex-col gap-2">
+						<div class="flex flex-row gap-2">
+							<span class="font-semibold w-48 lg:w-32">Name:</span>
+							<span>{selectedJob.name}</span>
+						</div>
+						<div class="flex flex-row gap-2">
+							<span class="font-semibold w-48 lg:w-32">Description:</span>
+							<span>{selectedJob.description}</span>
+						</div>
+						<!-- Les 6 premiers éléments -->
+						{#each Object.entries(selectedJob.stats).slice(6, 16) as [key, value]}
+							{#if value > 0}
+								<div class="flex flex-row gap-2">
+									<span class="font-semibold w-48 lg:w-32">{key}:</span>
+									<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+									<span>{value}</span>
+								</div>
+							{/if}
+						{/each}
 					</div>
-					<div class="flex flex-row gap-2">
-						<span class="font-semibold w-48 lg:w-32">Description:</span>
-						<span>{selectedJob.description}</span>
+					<div class="flex flex-col gap-2">
+						<!-- Le reste des éléments filtrés -->
+						{#each Object.entries(selectedJob.stats).slice(16) as [key, value]}
+							{#if value > 0}
+								<div class="flex flex-row gap-2">
+									<span class="font-semibold w-48">{key}:</span>
+									<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+									<span>{value}</span>
+								</div>
+							{/if}
+						{/each}
 					</div>
-					<!-- Les 6 premiers éléments -->
-					{#each Object.entries(selectedJob.stats).slice(6, 16) as [key, value]}
-						{#if value > 0}
-							<div class="flex flex-row gap-2">
-								<span class="font-semibold w-48 lg:w-32">{key}:</span>
-								<Tooltip type="light">{statOf(key)?.description}</Tooltip>
-								<span>{value}</span>
-							</div>
-						{/if}
-					{/each}
 				</div>
-
-				<div class="flex flex-col gap-2">
-					<!-- Le reste des éléments filtrés -->
-					{#each Object.entries(selectedJob.stats).slice(16) as [key, value]}
-						{#if value > 0}
-							<div class="flex flex-row gap-2">
-								<span class="font-semibold w-48">{key}:</span>
-								<Tooltip type="light">{statOf(key)?.description}</Tooltip>
-								<span>{value}</span>
+				<hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
+				<div>
+					<h2 class="text-xl font-bold">Skills</h2>
+					<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+						{#each skills.sort((a, b) => a.level - b.level) as skill}
+							<div class="border-2 rounded p-2 bg-gray-200">
+								<h3 class="font-bold">{skill.name} (Lv.{skill.level} - {skill.type})</h3>
+								{#each Object.entries(skill.stats) as [key, value]}
+									<p>{key}: {value}</p>
+								{/each}
 							</div>
-						{/if}
-					{/each}
+							<Tooltip type="light">{skill.description}</Tooltip>
+						{/each}
+					</div>
 				</div>
 			</div>
 		{/if}

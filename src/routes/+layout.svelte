@@ -29,7 +29,9 @@
 </svelte:head>
 
 <nav class="bg-blue-600 text-white p-4 flex justify-between items-center">
-	<button class="font-bold text-lg cursor-pointer hover:text-gray-200" onclick={goHome}>RPG Api</button>
+	<button class="font-bold text-lg cursor-pointer hover:text-gray-200" onclick={goHome}
+		>RPG Api</button
+	>
 
 	<div>
 		{#if $isAuthenticated}
@@ -37,26 +39,30 @@
 				onclick={handleLogout}
 				class="bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100"
 			>
-				Déconnexion
+				Log Out
 			</button>
 		{:else}
 			<button
 				onclick={handleLogin}
 				class="bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100"
 			>
-				Connexion
+				Log In
 			</button>
 		{/if}
 	</div>
 </nav>
 
-{@render children?.()}
+<div class="mt-15">
+	{@render children?.()}
+</div>
 
 <style>
 	/* Optionnel si tu veux gérer la barre sticky */
 	nav {
-		position: sticky;
+		position: fixed;
 		top: 0;
+		left: 0;
+		width: 100%;
 		z-index: 50;
 	}
 </style>

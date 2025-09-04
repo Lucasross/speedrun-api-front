@@ -1,15 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { setAuth } from '$lib/stores/auth';
+	import { EyeOutline, EyeSlashOutline } from 'flowbite-svelte-icons';
 	import api from '$lib/api';
 
-	let email = '';
-	let password = '';
-	let error = '';
+	let showPassword = $state(false);
+	let password = $state('');
+	let error = $state('');
 
 	async function handleLogin() {
 		try {
-			const res = await api.post('/auth/login', { email, password });
+			const res = await api.post('/auth/login', { password });
 			setAuth(res.data?.access_token);
 			goto('/api');
 		} catch (e: any) {
@@ -23,22 +24,30 @@
 </script>
 
 <div class="flex items-center justify-center h-screen bg-gray-100">
-	<form on:submit|preventDefault={handleLogin} class="bg-white p-8 rounded-2xl shadow w-96">
+	<form onsubmit={handleLogin} class="bg-white p-8 rounded-2xl shadow w-96">
 		<h1 class="text-2xl font-bold mb-6">Connexion</h1>
 
-		<input
-			type="email"
-			placeholder="Email"
-			bind:value={email}
-			class="w-full p-2 mb-4 border rounded"
-		/>
-
-		<input
-			type="password"
-			placeholder="Mot de passe"
-			bind:value={password}
-			class="w-full p-2 mb-4 border rounded"
-		/>
+		<div class="relative w-full">
+			<input
+				id="password"
+				type={showPassword ? 'text' : 'password'}
+				placeholder="Admin password"
+				bind:value={password}
+				class="w-full p-2 mb-4 border rounded pr-10"
+			/>
+			<!-- Icône à droite -->
+			<button
+				type="button"
+				class="absolute inset-y-0 mb-4 right-2 items-center flex cursor-pointer"
+				onclick={() => (showPassword = !showPassword)}
+			>
+				{#if showPassword}
+					<EyeOutline class="h-6 w-6 text-gray-500" />
+				{:else}
+					<EyeSlashOutline class="h-6 w-6 text-gray-500" />
+				{/if}
+			</button>
+		</div>
 
 		{#if error}
 			<p class="text-red-500 mb-2">{error}</p>
@@ -46,10 +55,14 @@
 
 		<div class="flex space-x-2">
 			<button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
-				Se connecter
+				Log in
 			</button>
 
-			<button on:click={handleSkip} class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
+			<button
+				type="button"
+				onclick={handleSkip}
+				class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+			>
 				Skip
 			</button>
 		</div>
