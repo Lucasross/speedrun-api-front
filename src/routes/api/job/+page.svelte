@@ -131,7 +131,7 @@
 	}
 
 	$: isCommonGood = totalCommon >= 150 && totalCommon <= 180;
-	$: isPowerGood = totalPhyMagReg >= 180 && totalPhyMagReg <= 205;
+	$: isPowerGood = totalPhyMagReg >= 130 && totalPhyMagReg <= 160;
 	$: isAllGood = isCommonGood && isPowerGood;
 </script>
 
@@ -167,7 +167,7 @@
 					Common: {totalCommon} (150 - 180)
 				</span>
 				<span class={`text-lg font-semibold ${!isPowerGood ? 'text-red-500' : 'text-green-500'}`}>
-					Power: {totalPhyMagReg} (180 - 205)
+					Power: {totalPhyMagReg} (130 - 160)
 				</span>
 			</div>
 		</div>
@@ -229,7 +229,7 @@
 		<!-- Onglet 2 -->
 		{#if activeTab === 1}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(6, 16) as key}
+				{#each getEntries(selectedJob).slice(6, 14) as key}
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-32 lg:w-64">{key}:</span>
 						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
@@ -241,7 +241,7 @@
 
 		{#if activeTab === 2}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(16, 30) as key}
+				{#each getEntries(selectedJob).slice(14, 24) as key}
 					<!-- enlève le dernier -->
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-32 lg:w-64">{key}:</span>
@@ -254,7 +254,7 @@
 
 		{#if activeTab === 3}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(30, 60) as key}
+				{#each getEntries(selectedJob).slice(24, 39) as key}
 					<!-- enlève le dernier -->
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-32 lg:w-64">{key}:</span>
@@ -267,7 +267,7 @@
 
 		{#if activeTab === 4}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(60) as key}
+				{#each getEntries(selectedJob).slice(39) as key}
 					<!-- enlève le dernier -->
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-32 lg:w-64">{key}:</span>
