@@ -7,7 +7,7 @@
 	import type { ValidationError } from './MonsterValidator';
 
 	type Monster = {
-		_id: string;
+		api_id: string;
 		name: string;
 		description: string;
 		stats: Record<string, number>;
@@ -49,14 +49,14 @@
 
 	async function deleteMonster() {
 		if (!selectedMonster) return;
-		await api.delete(`/monster/${selectedMonster._id}`);
-		monsters = monsters.filter((j) => j._id !== selectedMonster!._id);
+		await api.delete(`/monster/${selectedMonster.api_id}`);
+		monsters = monsters.filter((j) => j.api_id !== selectedMonster!.api_id);
 		selectedMonster = null;
 	}
 
 	async function updateMonster() {
 		if (!selectedMonster) return;
-		await api.put(`/monster/${selectedMonster._id}`, selectedMonster);
+		await api.put(`/monster/${selectedMonster.api_id}`, selectedMonster);
 		alert('Monster updated!');
 	}
 
@@ -75,7 +75,7 @@
 		const defaultStats: Record<string, number> = { 'Base Health': 100, 'Base Damage': 20 };
 
 		const newMonster: Monster = {
-			_id: '-1',
+			api_id: '-1',
 			name: '',
 			description: '',
 			stats: defaultStats
@@ -129,7 +129,7 @@
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
 			on:click={() => selectMonster(monster)}
 		>
-			<p>ID: {monster._id}</p>
+			<p>ID: {monster.api_id}</p>
 			<h3 class="font-bold">{monster.name}</h3>
 		</button>
 	{/each}
@@ -149,7 +149,7 @@
 	<div class="mt-6 mb-4 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
 		<div class="flex justify-between items-center">
 			<h2 class="text-xl font-bold">
-				{#if selectedMonster!._id === '-1'}[Create]{/if}
+				{#if selectedMonster!.api_id === '-1'}[Create]{/if}
 				{selectedMonster.name}
 			</h2>
 			<div class="flex flex-col items-start">
@@ -321,7 +321,7 @@
 				>
 					Supprimer
 				</button>
-				{#if selectedMonster._id !== '-1'}
+				{#if selectedMonster.api_id !== '-1'}
 					<button
 						class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={!isAllGood}
