@@ -22,14 +22,6 @@
 		defaultValue: number;
 	};
 
-	type Job = {
-		id: number;
-		name: string;
-		description: string;
-		stats: Record<string, number>;
-		[key: string]: any;
-	};
-
 	let monsters: Monster[] = [];
 	let stats: Stat[] = [];
 	let selectedMonster: Monster | null = null;
@@ -154,7 +146,7 @@
 
 <!-- Détails -->
 {#if selectedMonster}
-	<div class="mt-6 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
+	<div class="mt-6 mb-4 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
 		<div class="flex justify-between items-center">
 			<h2 class="text-xl font-bold">
 				{#if selectedMonster!._id === '-1'}[Create]{/if}

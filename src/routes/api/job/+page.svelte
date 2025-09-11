@@ -3,13 +3,14 @@
 	import api from '../../../lib/api'; // ton axios configuré
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { Tooltip } from 'flowbite-svelte';
+	import { validateJob } from './JobValidator';
+	import type { ValidationError } from './JobValidator';
 
 	type Job = {
-		id: number;
+		_id: string;
 		name: string;
 		description: string;
 		stats: Record<string, number>;
-		[key: string]: any;
 	};
 
 	type Stat = {
@@ -35,42 +36,17 @@
 	let stats: Stat[] = [];
 	let skills: Skill[] = [];
 	let selectedJob: Job | null = null;
+	let newEntry: string;
 	let activeTab = 0;
+	let thresholdMin = 200;
+	let thresholdMax = 230;
+	let level = 1;
 
-	// Total pondéré
-	$: totalCommon = selectedJob
-		? Object.entries(selectedJob.stats).reduce((sum, [key, val]) => {
-				const stat = stats.find((s) => s.name === key);
-
-				if (!stat) return sum;
-
-				if (stat?.type === 'common') {
-					const weight = stat ? stat.weight : 1;
-					return sum + val * weight;
-				}
-
-				return sum;
-			}, 0)
-		: 0;
-
-	$: totalPhyMagReg = selectedJob
-		? Object.entries(selectedJob.stats).reduce((sum, [key, val]) => {
-				const stat = stats.find((s) => s.name === key);
-
-				if (!stat) return sum;
-
-				if (['physical', 'magic', 'regeneration'].includes(stat.type)) {
-					const weight = stat ? stat.weight : 1;
-					return sum + val * weight;
-				}
-
-				return sum;
-			}, 0)
-		: 0;
+	let errors: ValidationError[] = [];
 
 	// Récupérer les jobs
 	onMount(async () => {
-		const jobRes = await api.get('/jobs');
+		const jobRes = await api.get('/job');
 		jobs = jobRes.data;
 
 		const statRes = await api.get('/stats');
@@ -80,26 +56,26 @@
 	// Sélection d’un job
 	async function selectJob(job: Job) {
 		selectedJob = job;
-		const skillRes = await api.get(`/jobs/${selectedJob._id}/skills`);
-		skills = skillRes.data;
+		const skillsRes = await api.get(`/job/${job._id}/skills`);
+		skills = skillsRes.data;
 	}
 
 	async function deleteJob() {
 		if (!selectedJob) return;
-		await api.delete(`/jobs/${selectedJob._id}`);
+		await api.delete(`/job/${selectedJob._id}`);
 		jobs = jobs.filter((j) => j._id !== selectedJob!._id);
 		selectedJob = null;
 	}
 
 	async function updateJob() {
 		if (!selectedJob) return;
-		await api.put(`/jobs/${selectedJob._id}`, selectedJob);
-		alert('Job mis à jour !');
+		await api.put(`/job/${selectedJob._id}`, selectedJob);
+		alert('Job updated!');
 	}
 
 	async function createJob() {
 		// Exemple : créer un job vide ou avec valeurs par défaut
-		const res = await api.post('/jobs', selectedJob);
+		const res = await api.post('/job', selectedJob);
 		const newJob = res.data;
 
 		// Ajouter le nouveau job à la liste et le sélectionner
@@ -109,33 +85,57 @@
 	}
 
 	function createEmptyJob(): Job {
-		const defaultStats = stats.reduce(
-			(acc, stat) => {
-				acc[stat.name] = stat.defaultValue ?? 0;
-				return acc;
-			},
-			{} as Record<string, number>
-		);
+		const defaultStats: Record<string, number> = { 'Base Health': 100, 'Base Damage': 20 };
 
-		const newJob: Job = { id: -1, name: '', description: '', stats: defaultStats };
+		const newJob: Job = {
+			_id: '-1',
+			name: '',
+			description: '',
+			stats: defaultStats
+		};
 
 		return newJob;
-	}
-
-	function getEntries(job: Job) {
-		return Object.keys(job.stats);
 	}
 
 	function statOf(key: string): Stat | undefined {
 		return stats.find((s) => s.name === key);
 	}
 
-	$: isCommonGood = totalCommon >= 150 && totalCommon <= 180;
-	$: isPowerGood = totalPhyMagReg >= 130 && totalPhyMagReg <= 160;
-	$: isAllGood = isCommonGood && isPowerGood;
+	function addEntry() {
+		selectedJob!.stats[newEntry] = statOf(newEntry)?.defaultValue || 0;
+	}
+
+	function updateKey(oldKey: string, newKey: string) {
+		if (oldKey === newKey) return;
+
+		selectedJob!.stats = Object.fromEntries(
+			Object.entries(selectedJob!.stats).map(([k, v]) => (k === oldKey ? [newKey, v] : [k, v]))
+		);
+	}
+
+	function removeKey(key: string) {
+		selectedJob!.stats = Object.fromEntries(
+			Object.entries(selectedJob!.stats).filter(([k]) => k !== key)
+		);
+	}
+
+	$: totalCommon = selectedJob
+		? Object.entries(selectedJob.stats).reduce((sum, [key, val]) => {
+				const stat = stats.find((s) => s.name === key);
+
+				if (!stat) return sum;
+
+				const weight = stat ? stat.weight : 1;
+				return sum + val * weight;
+			}, 0)
+		: 0;
+
+	$: errors = validateJob(selectedJob);
+	$: isCommonGood = totalCommon >= thresholdMin && totalCommon <= thresholdMax;
+	$: isAllGood = isCommonGood && errors.length === 0;
 </script>
 
-<!-- Grid des jobs -->
+<!-- Grid des job -->
 <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 p-4">
 	{#each jobs as job}
 		<button
@@ -159,15 +159,15 @@
 
 <!-- Détails -->
 {#if selectedJob}
-	<div class="mt-6 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
+	<div class="mt-6 mb-4 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
 		<div class="flex justify-between items-center">
-			<h2 class="text-xl font-bold">{selectedJob.name}</h2>
+			<h2 class="text-xl font-bold">
+				{#if selectedJob!._id === '-1'}[Create]{/if}
+				{selectedJob.name}
+			</h2>
 			<div class="flex flex-col items-start">
 				<span class={`text-lg font-semibold ${!isCommonGood ? 'text-red-500' : 'text-green-500'}`}>
-					Common: {totalCommon} (150 - 180)
-				</span>
-				<span class={`text-lg font-semibold ${!isPowerGood ? 'text-red-500' : 'text-green-500'}`}>
-					Power: {totalPhyMagReg} (130 - 160)
+					Common: {totalCommon} ({thresholdMin} - {thresholdMax})
 				</span>
 			</div>
 		</div>
@@ -178,35 +178,11 @@
 				class={`px-4 cursor-pointer py-2 ${activeTab === 0 ? 'border-b-2 border-blue-500 font-bold' : ''}`}
 				on:click={() => (activeTab = 0)}
 			>
-				Required
+				Common
 			</button>
 			<button
 				class={`px-4 cursor-pointer py-2 ${activeTab === 1 ? 'border-b-2 border-blue-500 font-bold' : ''}`}
 				on:click={() => (activeTab = 1)}
-			>
-				Common
-			</button>
-			<button
-				class={`px-4 cursor-pointer py-2 ${activeTab === 2 ? 'border-b-2 border-blue-500 font-bold' : ''}`}
-				on:click={() => (activeTab = 2)}
-			>
-				Physical
-			</button>
-			<button
-				class={`px-4 cursor-pointer py-2 ${activeTab === 3 ? 'border-b-2 border-blue-500 font-bold' : ''}`}
-				on:click={() => (activeTab = 3)}
-			>
-				Magical
-			</button>
-			<button
-				class={`px-4 cursor-pointer py-2 ${activeTab === 4 ? 'border-b-2 border-blue-500 font-bold' : ''}`}
-				on:click={() => (activeTab = 4)}
-			>
-				Regeneration
-			</button>
-			<button
-				class={`px-4 cursor-pointer py-2 ${activeTab === 5 ? 'border-b-2 border-blue-500 font-bold' : ''}`}
-				on:click={() => (activeTab = 5)}
 			>
 				Summary
 			</button>
@@ -223,113 +199,147 @@
 					<span class="font-semibold lg:w-64">Description:</span>
 					<input class="border p-1 flex-1 rounded" bind:value={selectedJob.description} />
 				</div>
+
+				{#each Object.entries(selectedJob.stats) as [key, value], i}
+					<div class="flex flex-row gap-2">
+						<!-- Dropdown -->
+						<select
+							class="border rounded-xl px-3 py-2 focus:ring focus:ring-blue-300 outline-none flex-1"
+							value={key}
+							on:change={(e) => updateKey(key, (e.target as HTMLSelectElement).value)}
+						>
+							{#each stats as stat}
+								<option value={stat.name}>{stat.name}</option>
+							{/each}
+						</select>
+
+						<!-- Input valeur -->
+						<input
+							type="number"
+							class="border rounded-xl px-3 py-2 w-24 text-right focus:ring focus:ring-blue-300 outline-none"
+							bind:value={selectedJob.stats[key]}
+						/>
+
+						<!-- Bouton delete -->
+						<button
+							type="button"
+							class="bg-red-500 hover:bg-red-600 text-white rounded-xl px-3 py-2 transition"
+							on:click={() => removeKey(key)}
+						>
+							✕
+						</button>
+					</div>
+				{/each}
+
+				<!-- Bouton d'ajout -->
 			</div>
+			<hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
+			<div class="flex flex-row gap-3">
+				<select
+					class="border flex-[1] rounded-xl px-3 py-2 focus:ring focus:ring-blue-300 outline-none"
+					bind:value={newEntry}
+				>
+					{#each stats as stat}
+						<option value={stat.name}>{stat.name}</option>
+					{/each}
+				</select>
+				<button
+					class="flex-[3] bg-blue-600 text-white font-medium py-2 px-4 rounded-xl shadow hover:bg-blue-700 transition"
+					on:click={addEntry}
+					type="button"
+				>
+					+ Add a statistic
+				</button>
+			</div>
+			<!-- End folder -->
 		{/if}
 
-		<!-- Onglet 2 -->
+		<!-- Summary -->
 		{#if activeTab === 1}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(6, 14) as key}
-					<div class="flex flex-row gap-2">
-						<span class="font-semibold w-32 lg:w-64">{key}:</span>
-						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
-						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
-					</div>
-				{/each}
-			</div>
-		{/if}
-
-		{#if activeTab === 2}
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(14, 24) as key}
-					<!-- enlève le dernier -->
-					<div class="flex flex-row gap-2">
-						<span class="font-semibold w-32 lg:w-64">{key}:</span>
-						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
-						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
-					</div>
-				{/each}
-			</div>
-		{/if}
-
-		{#if activeTab === 3}
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(24, 39) as key}
-					<!-- enlève le dernier -->
-					<div class="flex flex-row gap-2">
-						<span class="font-semibold w-32 lg:w-64">{key}:</span>
-						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
-						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
-					</div>
-				{/each}
-			</div>
-		{/if}
-
-		{#if activeTab === 4}
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each getEntries(selectedJob).slice(39) as key}
-					<!-- enlève le dernier -->
-					<div class="flex flex-row gap-2">
-						<span class="font-semibold w-32 lg:w-64">{key}:</span>
-						<Tooltip type="light">{statOf(key)?.description}</Tooltip>
-						<input class="border p-1 flex-1 rounded" bind:value={selectedJob.stats[key]} />
-					</div>
-				{/each}
-			</div>
-		{/if}
-
-		{#if activeTab === 5}
-			<div>
-				<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-					<div class="flex flex-col gap-2">
-						<div class="flex flex-row gap-2">
-							<span class="font-semibold w-48 lg:w-32">Name:</span>
-							<span>{selectedJob.name}</span>
-						</div>
-						<div class="flex flex-row gap-2">
-							<span class="font-semibold w-48 lg:w-32">Description:</span>
-							<span>{selectedJob.description}</span>
-						</div>
-						<!-- Les 6 premiers éléments -->
-						{#each Object.entries(selectedJob.stats).slice(6, 16) as [key, value]}
-							{#if value > 0}
-								<div class="flex flex-row gap-2">
-									<span class="font-semibold w-48 lg:w-32">{key}:</span>
-									<Tooltip type="light">{statOf(key)?.description}</Tooltip>
-									<span>{value}</span>
-								</div>
-							{/if}
-						{/each}
-					</div>
-					<div class="flex flex-col gap-2">
-						<!-- Le reste des éléments filtrés -->
-						{#each Object.entries(selectedJob.stats).slice(16) as [key, value]}
-							{#if value > 0}
-								<div class="flex flex-row gap-2">
-									<span class="font-semibold w-48">{key}:</span>
-									<Tooltip type="light">{statOf(key)?.description}</Tooltip>
-									<span>{value}</span>
-								</div>
-							{/if}
-						{/each}
-					</div>
+				<div class="flex flex-row gap-2">
+					<span class="font-semibold lg:w-32">Level visualizer:</span>
+					<input class="border p-1 rounded w-16" type="number" readonly bind:value={level} />
+					<input
+						class="border p-1 flex-5 rounded"
+						type="range"
+						step="1"
+						min="1"
+						max="60"
+						bind:value={level}
+					/>
 				</div>
-				<hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
-				<div>
-					<h2 class="text-xl font-bold">Skills</h2>
-					<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-						{#each skills.sort((a, b) => a.level - b.level) as skill}
-							<div class="border-2 rounded p-2 bg-gray-200">
-								<h3 class="font-bold">{skill.name} (Lv.{skill.level} - {skill.type})</h3>
-								{#each Object.entries(skill.stats) as [key, value]}
-									<p>{key}: {value}</p>
-								{/each}
+				<div></div>
+				<!-- Left part -->
+				<div class="flex flex-col gap-2">
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-48 lg:w-32">Name:</span>
+						<span>{selectedJob.name}</span>
+					</div>
+					<div class="flex flex-row gap-2">
+						<span class="font-semibold w-48 lg:w-32">Description:</span>
+						<span>{selectedJob.description}</span>
+					</div>
+					{#each Object.entries(selectedJob.stats).filter( ([key]) => key.includes('Base') ) as [key, value]}
+						{#if value > 0}
+							<div class="flex flex-row gap-2">
+								<span class="font-semibold w-48 lg:w-32">{key}:</span>
+								<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+								{#if key.includes('%')}
+									<span>{value}</span>
+								{:else}
+									<span>{value * level}</span>
+								{/if}
 							</div>
-							<Tooltip type="light">{skill.description}</Tooltip>
-						{/each}
-					</div>
+						{/if}
+					{/each}
+				</div>
+
+				<!-- Right part -->
+				<div class="flex flex-col gap-2">
+					{#each Object.entries(selectedJob.stats).filter(([key]) => !key.includes('Base')) as [key, value]}
+						{#if value > 0}
+							<div class="flex flex-row gap-2">
+								<span class="font-semibold w-48">{key}:</span>
+								<Tooltip type="light">{statOf(key)?.description}</Tooltip>
+								{#if key.includes('%')}
+									<span>{value}</span>
+								{:else}
+									<span>{value * level}</span>
+								{/if}
+							</div>
+						{/if}
+					{/each}
 				</div>
 			</div>
+
+			<!-- Skills -->
+			<hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
+			<div>
+				<h2 class="text-xl font-bold">Skills</h2>
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+					{#each skills.sort((a, b) => a.level - b.level) as skill}
+						<div class="border-2 rounded p-2 bg-gray-200">
+							<h3 class="font-bold">{skill.name} (Lv.{skill.level} - {skill.type})</h3>
+							{#each Object.entries(skill.stats) as [key, value]}
+								<p>{key}: {value}</p>
+							{/each}
+						</div>
+						<Tooltip type="light">{skill.description}</Tooltip>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		{#if errors.length > 0 || !isCommonGood}
+			<ul class="list-disc list-inside text-red-600 text-sm space-y-1 mt-5">
+				{#each errors as error}
+					<li>{error.message}</li>
+				{/each}
+				{#if !isCommonGood}
+					<li>The overall statistics fields should be between {thresholdMin} and {thresholdMax}</li>
+				{/if}
+			</ul>
 		{/if}
 
 		<!-- Actions -->
@@ -341,7 +351,7 @@
 				>
 					Supprimer
 				</button>
-				{#if selectedJob.id !== -1}
+				{#if selectedJob._id !== '-1'}
 					<button
 						class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={!isAllGood}
