@@ -3,10 +3,10 @@
 	import api from '../../../lib/api'; // ton axios configuré
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { Tooltip } from 'flowbite-svelte';
-	import { validateJob } from './JobValidator';
-	import type { ValidationError } from './JobValidator';
+	import { validateMonster } from './MonsterValidator';
+	import type { ValidationError } from './MonsterValidator';
 
-	type Job = {
+	type Monster = {
 		_id: string;
 		name: string;
 		description: string;
@@ -22,20 +22,9 @@
 		defaultValue: number;
 	};
 
-	type Skill = {
-		_id: string;
-		name: string;
-		description: string;
-		type: 'single' | 'multi' | 'passive' | 'buff' | 'active';
-		level: number;
-		stats: Record<string, number>;
-		job: string;
-	};
-
-	let jobs: Job[] = [];
+	let monsters: Monster[] = [];
 	let stats: Stat[] = [];
-	let skills: Skill[] = [];
-	let selectedJob: Job | null = null;
+	let selectedMonster: Monster | null = null;
 	let newEntry: string;
 	let activeTab = 0;
 	let thresholdMin = 200;
@@ -44,57 +33,55 @@
 
 	let errors: ValidationError[] = [];
 
-	// Récupérer les jobs
+	// Récupérer les monsters
 	onMount(async () => {
-		const jobRes = await api.get('/job');
-		jobs = jobRes.data;
+		const monsterRes = await api.get('/monster');
+		monsters = monsterRes.data;
 
 		const statRes = await api.get('/stats');
-		stats = statRes.data.filter((obj: { usages: string[] }) => obj.usages.includes('job'));
+		stats = statRes.data.filter((obj: { usages: string[] }) => obj.usages.includes('monster'));
 	});
 
-	// Sélection d’un job
-	async function selectJob(job: Job) {
-		selectedJob = job;
-		const skillsRes = await api.get(`/job/${job._id}/skills`);
-		skills = skillsRes.data;
+	// Sélection d’un monster
+	function selectMonster(monster: Monster) {
+		selectedMonster = monster;
 	}
 
-	async function deleteJob() {
-		if (!selectedJob) return;
-		await api.delete(`/job/${selectedJob._id}`);
-		jobs = jobs.filter((j) => j._id !== selectedJob!._id);
-		selectedJob = null;
+	async function deleteMonster() {
+		if (!selectedMonster) return;
+		await api.delete(`/monster/${selectedMonster._id}`);
+		monsters = monsters.filter((j) => j._id !== selectedMonster!._id);
+		selectedMonster = null;
 	}
 
-	async function updateJob() {
-		if (!selectedJob) return;
-		await api.put(`/job/${selectedJob._id}`, selectedJob);
-		alert('Job updated!');
+	async function updateMonster() {
+		if (!selectedMonster) return;
+		await api.put(`/monster/${selectedMonster._id}`, selectedMonster);
+		alert('Monster updated!');
 	}
 
-	async function createJob() {
-		// Exemple : créer un job vide ou avec valeurs par défaut
-		const res = await api.post('/job', selectedJob);
-		const newJob = res.data;
+	async function createMonster() {
+		// Exemple : créer un monster vide ou avec valeurs par défaut
+		const res = await api.post('/monster', selectedMonster);
+		const newMonster = res.data;
 
-		// Ajouter le nouveau job à la liste et le sélectionner
-		jobs = [newJob, ...jobs];
-		selectedJob = newJob;
+		// Ajouter le nouveau monster à la liste et le sélectionner
+		monsters = [newMonster, ...monsters];
+		selectedMonster = newMonster;
 		activeTab = 0;
 	}
 
-	function createEmptyJob(): Job {
+	function createEmptyMonster(): Monster {
 		const defaultStats: Record<string, number> = { 'Base Health': 100, 'Base Damage': 20 };
 
-		const newJob: Job = {
+		const newMonster: Monster = {
 			_id: '-1',
 			name: '',
 			description: '',
 			stats: defaultStats
 		};
 
-		return newJob;
+		return newMonster;
 	}
 
 	function statOf(key: string): Stat | undefined {
@@ -102,25 +89,25 @@
 	}
 
 	function addEntry() {
-		selectedJob!.stats[newEntry] = statOf(newEntry)?.defaultValue || 0;
+		selectedMonster!.stats[newEntry] = statOf(newEntry)?.defaultValue || 0;
 	}
 
 	function updateKey(oldKey: string, newKey: string) {
 		if (oldKey === newKey) return;
 
-		selectedJob!.stats = Object.fromEntries(
-			Object.entries(selectedJob!.stats).map(([k, v]) => (k === oldKey ? [newKey, v] : [k, v]))
+		selectedMonster!.stats = Object.fromEntries(
+			Object.entries(selectedMonster!.stats).map(([k, v]) => (k === oldKey ? [newKey, v] : [k, v]))
 		);
 	}
 
 	function removeKey(key: string) {
-		selectedJob!.stats = Object.fromEntries(
-			Object.entries(selectedJob!.stats).filter(([k]) => k !== key)
+		selectedMonster!.stats = Object.fromEntries(
+			Object.entries(selectedMonster!.stats).filter(([k]) => k !== key)
 		);
 	}
 
-	$: totalCommon = selectedJob
-		? Object.entries(selectedJob.stats).reduce((sum, [key, val]) => {
+	$: totalCommon = selectedMonster
+		? Object.entries(selectedMonster.stats).reduce((sum, [key, val]) => {
 				const stat = stats.find((s) => s.name === key);
 
 				if (!stat) return sum;
@@ -130,40 +117,40 @@
 			}, 0)
 		: 0;
 
-	$: errors = validateJob(selectedJob);
+	$: errors = validateMonster(selectedMonster);
 	$: isCommonGood = totalCommon >= thresholdMin && totalCommon <= thresholdMax;
 	$: isAllGood = isCommonGood && errors.length === 0;
 </script>
 
-<!-- Grid des job -->
+<!-- Grid des monster -->
 <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 p-4">
-	{#each jobs as job}
+	{#each monsters as monster}
 		<button
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
-			on:click={() => selectJob(job)}
+			on:click={() => selectMonster(monster)}
 		>
-			<p>ID: {job._id}</p>
-			<h3 class="font-bold">{job.name}</h3>
+			<p>ID: {monster._id}</p>
+			<h3 class="font-bold">{monster.name}</h3>
 		</button>
 	{/each}
 
 	{#if $isAuthenticated}
 		<button
 			class="p-4 bg-green-100 rounded cursor-pointer hover:bg-green-200 transition"
-			on:click={() => selectJob(createEmptyJob())}
+			on:click={() => selectMonster(createEmptyMonster())}
 		>
-			<h3 class="font-bold">Create a job</h3>
+			<h3 class="font-bold">Create a monster</h3>
 		</button>
 	{/if}
 </div>
 
 <!-- Détails -->
-{#if selectedJob}
+{#if selectedMonster}
 	<div class="mt-6 mb-4 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
 		<div class="flex justify-between items-center">
 			<h2 class="text-xl font-bold">
-				{#if selectedJob!._id === '-1'}[Create]{/if}
-				{selectedJob.name}
+				{#if selectedMonster!._id === '-1'}[Create]{/if}
+				{selectedMonster.name}
 			</h2>
 			<div class="flex flex-col items-start">
 				<span class={`text-lg font-semibold ${!isCommonGood ? 'text-red-500' : 'text-green-500'}`}>
@@ -193,14 +180,14 @@
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				<div class="flex flex-row gap-2">
 					<span class="font-semibold lg:w-64">Name:</span>
-					<input class="border p-1 flex-1 rounded" bind:value={selectedJob.name} />
+					<input class="border p-1 flex-1 rounded" bind:value={selectedMonster.name} />
 				</div>
 				<div class="flex flex-row gap-2">
 					<span class="font-semibold lg:w-64">Description:</span>
-					<input class="border p-1 flex-1 rounded" bind:value={selectedJob.description} />
+					<input class="border p-1 flex-1 rounded" bind:value={selectedMonster.description} />
 				</div>
 
-				{#each Object.entries(selectedJob.stats) as [key, value], i}
+				{#each Object.entries(selectedMonster.stats) as [key, value], i}
 					<div class="flex flex-row gap-2">
 						<!-- Dropdown -->
 						<select
@@ -217,7 +204,7 @@
 						<input
 							type="number"
 							class="border rounded-xl px-3 py-2 w-24 text-right focus:ring focus:ring-blue-300 outline-none"
-							bind:value={selectedJob.stats[key]}
+							bind:value={selectedMonster.stats[key]}
 						/>
 
 						<!-- Bouton delete -->
@@ -270,17 +257,17 @@
 					/>
 				</div>
 				<div></div>
-				<!-- Left part -->
 				<div class="flex flex-col gap-2">
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-48 lg:w-32">Name:</span>
-						<span>{selectedJob.name}</span>
+						<span>{selectedMonster.name}</span>
 					</div>
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-48 lg:w-32">Description:</span>
-						<span>{selectedJob.description}</span>
+						<span>{selectedMonster.description}</span>
 					</div>
-					{#each Object.entries(selectedJob.stats).filter( ([key]) => key.includes('Base') ) as [key, value]}
+					<!-- Les 6 premiers éléments -->
+					{#each Object.entries(selectedMonster.stats).filter( ([key]) => key.includes('Base') ) as [key, value]}
 						{#if value > 0}
 							<div class="flex flex-row gap-2">
 								<span class="font-semibold w-48 lg:w-32">{key}:</span>
@@ -295,9 +282,9 @@
 					{/each}
 				</div>
 
-				<!-- Right part -->
 				<div class="flex flex-col gap-2">
-					{#each Object.entries(selectedJob.stats).filter(([key]) => !key.includes('Base')) as [key, value]}
+					<!-- Le reste des éléments filtrés -->
+					{#each Object.entries(selectedMonster.stats).filter(([key]) => !key.includes('Base')) as [key, value]}
 						{#if value > 0}
 							<div class="flex flex-row gap-2">
 								<span class="font-semibold w-48">{key}:</span>
@@ -309,23 +296,6 @@
 								{/if}
 							</div>
 						{/if}
-					{/each}
-				</div>
-			</div>
-
-			<!-- Skills -->
-			<hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
-			<div>
-				<h2 class="text-xl font-bold">Skills</h2>
-				<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-					{#each skills.sort((a, b) => a.level - b.level) as skill}
-						<div class="border-2 rounded p-2 bg-gray-200">
-							<h3 class="font-bold">{skill.name} (Lv.{skill.level} - {skill.type})</h3>
-							{#each Object.entries(skill.stats) as [key, value]}
-								<p>{key}: {value}</p>
-							{/each}
-						</div>
-						<Tooltip type="light">{skill.description}</Tooltip>
 					{/each}
 				</div>
 			</div>
@@ -347,15 +317,15 @@
 			<div class="flex justify-end gap-4 mt-6">
 				<button
 					class="px-4 py-2 bg-red-500 text-white rounded cursor-pointer hover:bg-red-600"
-					on:click={deleteJob}
+					on:click={deleteMonster}
 				>
 					Supprimer
 				</button>
-				{#if selectedJob._id !== '-1'}
+				{#if selectedMonster._id !== '-1'}
 					<button
 						class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={!isAllGood}
-						on:click={updateJob}
+						on:click={updateMonster}
 					>
 						Update
 					</button>
@@ -363,7 +333,7 @@
 					<button
 						class="px-4 py-2 bg-green-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={!isAllGood}
-						on:click={createJob}
+						on:click={createMonster}
 					>
 						Create
 					</button>

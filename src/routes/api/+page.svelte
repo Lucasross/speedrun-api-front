@@ -27,10 +27,10 @@
       </div>
     </button>
 
-    <button class="w-full cursor-not-allowed">
-      <div class="p-6 bg-gray-200 rounded shadow flex flex-col justify-between h-40 hover:bg-green-200 transition">
+    <button on:click={() => goto('/api/monster')} class="w-full cursor-pointer">
+      <div class="p-6 bg-blue-100 rounded shadow flex flex-col justify-between h-40 hover:bg-green-200 transition">
         <h2 class="text-xl font-bold mb-2">Monsters</h2>
-        <p>Coming soon.</p>
+        <p>All the monsters with their level 1 statistics.</p>
       </div>
     </button>
 
