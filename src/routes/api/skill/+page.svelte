@@ -6,6 +6,8 @@
 	import { validateSkill } from './SkillValidator';
 	import type { ValidationError } from './SkillValidator';
 
+ 	const types: string[] = ['single', 'multi', 'passive', 'buff', 'active']
+
 	type Skill = {
 		api_id: string;
 		name: string;
@@ -220,6 +222,18 @@
 				</div>
 
 				<div class="flex flex-row gap-2">
+					<span class="font-semibold lg:w-64">Type:</span>
+					<select
+						class="border p-1 flex-1 rounded focus:ring focus:ring-black-300 outline-none flex-1"
+						bind:value={selectedSkill.type}
+					>
+						{#each types as t}
+							<option value={t}>{t}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="flex flex-row gap-2">
 					<span class="font-semibold lg:w-64">Level:</span>
 					<input
 						class="border p-1 rounded w-16"
@@ -236,6 +250,8 @@
 						bind:value={selectedSkill.level}
 					/>
 				</div>
+
+				<div></div>
 
 				{#each Object.entries(selectedSkill.stats) as [key, value], i}
 					<div class="flex flex-row gap-2">
