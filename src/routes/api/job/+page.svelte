@@ -7,7 +7,7 @@
 	import type { ValidationError } from './JobValidator';
 
 	type Job = {
-		_id: string;
+		api_id: string;
 		name: string;
 		description: string;
 		stats: Record<string, number>;
@@ -23,7 +23,7 @@
 	};
 
 	type Skill = {
-		_id: string;
+		api_id: string;
 		name: string;
 		description: string;
 		type: 'single' | 'multi' | 'passive' | 'buff' | 'active';
@@ -56,20 +56,21 @@
 	// Sélection d’un job
 	async function selectJob(job: Job) {
 		selectedJob = job;
-		const skillsRes = await api.get(`/job/${job._id}/skills`);
-		skills = skillsRes.data;
+		const skillsRes = await api.get(`/job/${job.api_id}`);
+		skills = skillsRes.data.skills;
+		console.log(skillsRes.data);
 	}
 
 	async function deleteJob() {
 		if (!selectedJob) return;
-		await api.delete(`/job/${selectedJob._id}`);
-		jobs = jobs.filter((j) => j._id !== selectedJob!._id);
+		await api.delete(`/job/${selectedJob.api_id}`);
+		jobs = jobs.filter((j) => j.api_id !== selectedJob!.api_id);
 		selectedJob = null;
 	}
 
 	async function updateJob() {
 		if (!selectedJob) return;
-		await api.put(`/job/${selectedJob._id}`, selectedJob);
+		await api.put(`/job/${selectedJob.api_id}`, selectedJob);
 		alert('Job updated!');
 	}
 
@@ -88,7 +89,7 @@
 		const defaultStats: Record<string, number> = { 'Base Health': 100, 'Base Damage': 20 };
 
 		const newJob: Job = {
-			_id: '-1',
+			api_id: '-1',
 			name: '',
 			description: '',
 			stats: defaultStats
@@ -142,7 +143,7 @@
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
 			on:click={() => selectJob(job)}
 		>
-			<p>ID: {job._id}</p>
+			<p>ID: {job.api_id}</p>
 			<h3 class="font-bold">{job.name}</h3>
 		</button>
 	{/each}
@@ -162,7 +163,7 @@
 	<div class="mt-6 mb-4 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
 		<div class="flex justify-between items-center">
 			<h2 class="text-xl font-bold">
-				{#if selectedJob!._id === '-1'}[Create]{/if}
+				{#if selectedJob!.api_id === '-1'}[Create]{/if}
 				{selectedJob.name}
 			</h2>
 			<div class="flex flex-col items-start">
@@ -351,7 +352,7 @@
 				>
 					Supprimer
 				</button>
-				{#if selectedJob._id !== '-1'}
+				{#if selectedJob.api_id !== '-1'}
 					<button
 						class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={!isAllGood}

@@ -6,8 +6,10 @@
 	import { validateSkill } from './SkillValidator';
 	import type { ValidationError } from './SkillValidator';
 
+ 	const types: string[] = ['single', 'multi', 'passive', 'buff', 'active']
+
 	type Skill = {
-		_id: string;
+		api_id: string;
 		name: string;
 		description: string;
 		type: 'single' | 'multi' | 'passive' | 'buff' | 'active';
@@ -59,18 +61,19 @@
 	// Sélection d’un skill
 	function selectSkill(skill: Skill) {
 		selectedSkill = skill;
+		console.log(selectedSkill);
 	}
 
 	async function deleteSkill() {
 		if (!selectedSkill) return;
-		await api.delete(`/skill/${selectedSkill._id}`);
-		skills = skills.filter((j) => j._id !== selectedSkill!._id);
+		await api.delete(`/skill/${selectedSkill.api_id}`);
+		skills = skills.filter((j) => j.api_id !== selectedSkill!.api_id);
 		selectedSkill = null;
 	}
 
 	async function updateSkill() {
 		if (!selectedSkill) return;
-		await api.put(`/skill/${selectedSkill._id}`, selectedSkill);
+		await api.put(`/skill/${selectedSkill.api_id}`, selectedSkill);
 		alert('Skill updated!');
 	}
 
@@ -89,7 +92,7 @@
 		const defaultStats: Record<string, number> = {};
 
 		const newSkill: Skill = {
-			_id: '-1',
+			api_id: '-1',
 			name: '',
 			description: '',
 			type: 'single',
@@ -148,7 +151,7 @@
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
 			on:click={() => selectSkill(skill)}
 		>
-			<p>ID: {skill._id}</p>
+			<p>ID: {skill.api_id}</p>
 			<h3 class="font-bold">{skill.name}</h3>
 		</button>
 	{/each}
@@ -168,7 +171,7 @@
 	<div class="mt-6 mb-4 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
 		<div class="flex justify-between items-center">
 			<h2 class="text-xl font-bold">
-				{#if selectedSkill!._id === '-1'}[Create]{/if}
+				{#if selectedSkill!.api_id === '-1'}[Create]{/if}
 				{selectedSkill.name}
 			</h2>
 			<div class="flex flex-col items-start">
@@ -219,6 +222,18 @@
 				</div>
 
 				<div class="flex flex-row gap-2">
+					<span class="font-semibold lg:w-64">Type:</span>
+					<select
+						class="border p-1 flex-1 rounded focus:ring focus:ring-black-300 outline-none flex-1"
+						bind:value={selectedSkill.type}
+					>
+						{#each types as t}
+							<option value={t}>{t}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="flex flex-row gap-2">
 					<span class="font-semibold lg:w-64">Level:</span>
 					<input
 						class="border p-1 rounded w-16"
@@ -235,6 +250,8 @@
 						bind:value={selectedSkill.level}
 					/>
 				</div>
+
+				<div></div>
 
 				{#each Object.entries(selectedSkill.stats) as [key, value], i}
 					<div class="flex flex-row gap-2">
@@ -370,7 +387,7 @@
 				>
 					Supprimer
 				</button>
-				{#if selectedSkill._id !== '-1'}
+				{#if selectedSkill.api_id !== '-1'}
 					<button
 						class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={!isAllGood}

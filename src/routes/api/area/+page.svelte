@@ -4,7 +4,7 @@
 	import { isAuthenticated } from '$lib/stores/auth';
 
 	type Area = {
-		_id: string;
+		api_id: string;
 		name: string;
 		description: string;
 		position_x: number;
@@ -28,14 +28,14 @@
 
 	async function deleteArea() {
 		if (!selectedArea) return;
-		await api.delete(`/area/${selectedArea._id}`);
-		areas = areas.filter((j) => j._id !== selectedArea!._id);
+		await api.delete(`/area/${selectedArea.api_id}`);
+		areas = areas.filter((j) => j.api_id !== selectedArea!.api_id);
 		selectedArea = null;
 	}
 
 	async function updateArea() {
 		if (!selectedArea) return;
-		await api.put(`/area/${selectedArea._id}`, selectedArea);
+		await api.put(`/area/${selectedArea.api_id}`, selectedArea);
 		alert('Area updated!');
 	}
 
@@ -54,7 +54,7 @@
 		const defaultStats: Record<string, number> = {};
 
 		const newArea: Area = {
-			_id: '-1',
+			api_id: '-1',
 			name: '',
 			description: '',
 			position_x: 0.25,
@@ -109,7 +109,7 @@
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
 			on:click={() => selectArea(area)}
 		>
-			<p>ID: {area._id}</p>
+			<p>ID: {area.api_id}</p>
 			<h3 class="font-bold">{area.name}</h3>
 		</button>
 	{/each}
@@ -275,7 +275,7 @@
 				>
 					Delete
 				</button>
-				{#if selectedArea._id !== '-1'}
+				{#if selectedArea.api_id !== '-1'}
 					<button
 						class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
 						on:click={updateArea}

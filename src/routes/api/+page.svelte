@@ -34,10 +34,10 @@
       </div>
     </button>
 
-    <button class="w-full cursor-not-allowed">
-      <div class="p-6 bg-gray-200 rounded shadow flex flex-col justify-between h-40 hover:bg-green-200 transition">
+    <button on:click={() => goto('/api/sector')} class="w-full cursor-pointer">
+      <div class="p-6 bg-blue-100 rounded shadow flex flex-col justify-between h-40 hover:bg-green-200 transition">
         <h2 class="text-xl font-bold mb-2">Sector</h2>
-        <p>Coming soon.</p>
+        <p>The sector placed inside area that hold the monsters the player gonna fight.</p>
       </div>
     </button>
 
