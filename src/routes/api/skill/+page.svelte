@@ -5,6 +5,7 @@
 	import { Tooltip } from 'flowbite-svelte';
 	import { validateSkill } from './SkillValidator';
 	import type { ValidationError } from './SkillValidator';
+	import { searchQuery } from '$lib/stores/search';
 
  	const types: string[] = ['single', 'multi', 'passive', 'buff', 'active']
 
@@ -137,6 +138,7 @@
 			}, 0)
 		: 0;
 
+	$: filteredItems = skills.filter((e: Skill) => e.name.toUpperCase().includes($searchQuery.toUpperCase()));		
 	$: errors = validateSkill(selectedSkill);
 	$: thresholdOffset = (selectedSkill?.level || 0) * 1.5;
 	$: thresholdMax = 50 + thresholdOffset;
@@ -146,7 +148,7 @@
 
 <!-- Grid des skill -->
 <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 p-4">
-	{#each skills as skill}
+	{#each filteredItems as skill}
 		<button
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
 			on:click={() => selectSkill(skill)}

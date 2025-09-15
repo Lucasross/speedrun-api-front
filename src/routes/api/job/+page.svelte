@@ -5,6 +5,7 @@
 	import { Tooltip } from 'flowbite-svelte';
 	import { validateJob } from './JobValidator';
 	import type { ValidationError } from './JobValidator';
+	import { searchQuery } from '$lib/stores/search';
 
 	type Job = {
 		api_id: string;
@@ -131,6 +132,7 @@
 			}, 0)
 		: 0;
 
+	$: filteredItems = jobs.filter((e: Job) => e.name.toUpperCase().includes($searchQuery.toUpperCase()));
 	$: errors = validateJob(selectedJob);
 	$: isCommonGood = totalCommon >= thresholdMin && totalCommon <= thresholdMax;
 	$: isAllGood = isCommonGood && errors.length === 0;
@@ -138,7 +140,7 @@
 
 <!-- Grid des job -->
 <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 p-4">
-	{#each jobs as job}
+	{#each filteredItems as job}
 		<button
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
 			on:click={() => selectJob(job)}
