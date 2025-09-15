@@ -28,10 +28,12 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<nav class="bg-blue-600 text-white p-4 flex justify-between items-center">
-	<button class="font-bold text-lg cursor-pointer hover:text-gray-200" onclick={goHome}
-		>RPG Api</button
-	>
+<nav
+	class="fixed top-0 left-0 w-full bg-blue-600 text-white p-4 z-50 flex justify-between items-center"
+>
+	<button class="font-bold text-lg cursor-pointer hover:text-gray-200" onclick={goHome}>
+		RPG Api
+	</button>
 
 	<div>
 		{#if $isAuthenticated}
@@ -52,17 +54,6 @@
 	</div>
 </nav>
 
-<div class="mt-15">
+<div class="pt-20">
 	{@render children?.()}
 </div>
-
-<style>
-	/* Optionnel si tu veux gérer la barre sticky */
-	nav {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		z-index: 50;
-	}
-</style>

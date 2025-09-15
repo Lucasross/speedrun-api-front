@@ -3,15 +3,30 @@
 	import api from '../../../lib/api'; // ton axios configuré
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { Tooltip } from 'flowbite-svelte';
-	import { validateMonster } from './MonsterValidator';
-	import type { ValidationError } from './MonsterValidator';
+	import { validateEquipment } from './EquipmentValidator';
+	import type { ValidationError } from './EquipmentValidator';
 	import { searchQuery } from '$lib/stores/search';
 
-	type Monster = {
+	const slots: string[] = [
+		'head',
+		'torso',
+		'legs',
+		'boots',
+		'hands',
+		'gloves',
+		'ring',
+		'necklace',
+		'weapon'
+	];
+
+	type Equipment = {
 		api_id: string;
 		name: string;
 		description: string;
+		level: number;
+		slot: 'head' | 'torso' | 'legs' | 'boots' | 'hands' | 'gloves' | 'ring' | 'necklace' | 'weapon';
 		stats: Record<string, number>;
+		area: string;
 	};
 
 	type Stat = {
@@ -23,66 +38,82 @@
 		defaultValue: number;
 	};
 
-	let monsters: Monster[] = [];
+	type Area = {
+		_id: string;
+		api_id: string;
+		name: string;
+		description: string;
+		position_x: number;
+		position_y: number;
+	};
+
+	let equipments: Equipment[] = [];
 	let stats: Stat[] = [];
-	let selectedMonster: Monster | null = null;
+	let areas: Area[] = [];
+	let selectedEquipment: Equipment | null = null;
 	let newEntry: string;
 	let activeTab = 0;
-	let thresholdMin = 200;
-	let thresholdMax = 230;
+	let thresholdMin = 10;
 	let level = 1;
 
 	let errors: ValidationError[] = [];
 
-	// Récupérer les monsters
+	// Récupérer les equipments
 	onMount(async () => {
-		const monsterRes = await api.get('/monster');
-		monsters = monsterRes.data;
+		const equipmentRes = await api.get('/equipment');
+		equipments = equipmentRes.data;
 
 		const statRes = await api.get('/stats');
-		stats = statRes.data.filter((obj: { usages: string[] }) => obj.usages.includes('monster'));
+		stats = statRes.data.filter((obj: { usages: string[] }) => obj.usages.includes('equipment'));
+
+		const areaRes = await api.get('/area');
+		areas = areaRes.data;
 	});
 
-	// Sélection d’un monster
-	function selectMonster(monster: Monster) {
-		selectedMonster = monster;
+	// Sélection d’un equipment
+	function selectEquipment(equipment: Equipment) {
+		selectedEquipment = equipment;
+		console.log(selectedEquipment);
 	}
 
-	async function deleteMonster() {
-		if (!selectedMonster) return;
-		await api.delete(`/monster/${selectedMonster.api_id}`);
-		monsters = monsters.filter((j) => j.api_id !== selectedMonster!.api_id);
-		selectedMonster = null;
+	async function deleteEquipment() {
+		if (!selectedEquipment) return;
+		await api.delete(`/equipment/${selectedEquipment.api_id}`);
+		equipments = equipments.filter((j) => j.api_id !== selectedEquipment!.api_id);
+		selectedEquipment = null;
 	}
 
-	async function updateMonster() {
-		if (!selectedMonster) return;
-		await api.put(`/monster/${selectedMonster.api_id}`, selectedMonster);
-		alert('Monster updated!');
+	async function updateEquipment() {
+		if (!selectedEquipment) return;
+		await api.put(`/equipment/${selectedEquipment.api_id}`, selectedEquipment);
+		alert('Equipment updated!');
 	}
 
-	async function createMonster() {
-		// Exemple : créer un monster vide ou avec valeurs par défaut
-		const res = await api.post('/monster', selectedMonster);
-		const newMonster = res.data;
+	async function createEquipment() {
+		// Exemple : créer un equipment vide ou avec valeurs par défaut
+		const res = await api.post('/equipment', selectedEquipment);
+		const newEquipment = res.data;
 
-		// Ajouter le nouveau monster à la liste et le sélectionner
-		monsters = [newMonster, ...monsters];
-		selectedMonster = newMonster;
+		// Ajouter le nouveau equipment à la liste et le sélectionner
+		equipments = [newEquipment, ...equipments];
+		selectedEquipment = newEquipment;
 		activeTab = 0;
 	}
 
-	function createEmptyMonster(): Monster {
-		const defaultStats: Record<string, number> = { 'Base Health': 100, 'Base Damage': 20 };
+	function createEmptyEquipment(): Equipment {
+		const defaultStats: Record<string, number> = { Damage: 10 };
 
-		const newMonster: Monster = {
+		const newEquipment: Equipment = {
 			api_id: '-1',
 			name: '',
 			description: '',
-			stats: defaultStats
+			level: 0,
+			slot: 'head',
+			stats: defaultStats,
+			area: areas[0]._id
 		};
 
-		return newMonster;
+		return newEquipment;
 	}
 
 	function statOf(key: string): Stat | undefined {
@@ -90,25 +121,27 @@
 	}
 
 	function addEntry() {
-		selectedMonster!.stats[newEntry] = statOf(newEntry)?.defaultValue || 0;
+		selectedEquipment!.stats[newEntry] = statOf(newEntry)?.defaultValue || 0;
 	}
 
 	function updateKey(oldKey: string, newKey: string) {
 		if (oldKey === newKey) return;
 
-		selectedMonster!.stats = Object.fromEntries(
-			Object.entries(selectedMonster!.stats).map(([k, v]) => (k === oldKey ? [newKey, v] : [k, v]))
+		selectedEquipment!.stats = Object.fromEntries(
+			Object.entries(selectedEquipment!.stats).map(([k, v]) =>
+				k === oldKey ? [newKey, v] : [k, v]
+			)
 		);
 	}
 
 	function removeKey(key: string) {
-		selectedMonster!.stats = Object.fromEntries(
-			Object.entries(selectedMonster!.stats).filter(([k]) => k !== key)
+		selectedEquipment!.stats = Object.fromEntries(
+			Object.entries(selectedEquipment!.stats).filter(([k]) => k !== key)
 		);
 	}
 
-	$: totalCommon = selectedMonster
-		? Object.entries(selectedMonster.stats).reduce((sum, [key, val]) => {
+	$: totalCommon = selectedEquipment
+		? Object.entries(selectedEquipment.stats).reduce((sum, [key, val]) => {
 				const stat = stats.find((s) => s.name === key);
 
 				if (!stat) return sum;
@@ -118,41 +151,43 @@
 			}, 0)
 		: 0;
 
-	$: filteredItems = monsters.filter((e: Monster) => e.name.toUpperCase().includes($searchQuery.toUpperCase()));
-	$: errors = validateMonster(selectedMonster);
+	$: filteredEquipment = equipments.filter((e: Equipment) => e.name.toUpperCase().includes($searchQuery.toUpperCase()));
+	$: errors = validateEquipment(selectedEquipment);
+	$: thresholdOffset = (selectedEquipment?.level || 0) * 0.8;
+	$: thresholdMax = 30 + thresholdOffset;
 	$: isCommonGood = totalCommon >= thresholdMin && totalCommon <= thresholdMax;
 	$: isAllGood = isCommonGood && errors.length === 0;
 </script>
 
-<!-- Grid des monster -->
+<!-- Grid des equipment -->
 <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 p-4">
-	{#each filteredItems as monster}
+	{#each filteredEquipment as equipment}
 		<button
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
-			on:click={() => selectMonster(monster)}
+			on:click={() => selectEquipment(equipment)}
 		>
-			<p>ID: {monster.api_id}</p>
-			<h3 class="font-bold">{monster.name}</h3>
+			<p>ID: {equipment.api_id}</p>
+			<h3 class="font-bold">{equipment.name}</h3>
 		</button>
 	{/each}
 
 	{#if $isAuthenticated}
 		<button
 			class="p-4 bg-green-100 rounded cursor-pointer hover:bg-green-200 transition"
-			on:click={() => selectMonster(createEmptyMonster())}
+			on:click={() => selectEquipment(createEmptyEquipment())}
 		>
-			<h3 class="font-bold">Create a monster</h3>
+			<h3 class="font-bold">Create a equipment</h3>
 		</button>
 	{/if}
 </div>
 
 <!-- Détails -->
-{#if selectedMonster}
+{#if selectedEquipment}
 	<div class="mt-6 mb-4 p-4 border rounded bg-gray-50 w-full lg:w-5/6 xl:w-3/4 mx-auto">
 		<div class="flex justify-between items-center">
 			<h2 class="text-xl font-bold">
-				{#if selectedMonster!.api_id === '-1'}[Create]{/if}
-				{selectedMonster.name}
+				{#if selectedEquipment!.api_id === '-1'}[Create]{/if}
+				{selectedEquipment.name}
 			</h2>
 			<div class="flex flex-col items-start">
 				<span class={`text-lg font-semibold ${!isCommonGood ? 'text-red-500' : 'text-green-500'}`}>
@@ -182,14 +217,58 @@
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				<div class="flex flex-row gap-2">
 					<span class="font-semibold lg:w-64">Name:</span>
-					<input class="border p-1 flex-1 rounded" bind:value={selectedMonster.name} />
+					<input class="border p-1 flex-1 rounded" bind:value={selectedEquipment.name} />
 				</div>
 				<div class="flex flex-row gap-2">
 					<span class="font-semibold lg:w-64">Description:</span>
-					<input class="border p-1 flex-1 rounded" bind:value={selectedMonster.description} />
+					<input class="border p-1 flex-1 rounded" bind:value={selectedEquipment.description} />
 				</div>
 
-				{#each Object.entries(selectedMonster.stats) as [key, value], i}
+				<div class="flex flex-row gap-2">
+					<span class="font-semibold lg:w-64">Area:</span>
+					<select
+						class="border p-1 flex-1 rounded focus:ring focus:ring-black-300 outline-none flex-1"
+						bind:value={selectedEquipment.area}
+					>
+						{#each areas as area}
+							<option value={area._id}>{area.name}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="flex flex-row gap-2">
+					<span class="font-semibold lg:w-64">Slot:</span>
+					<select
+						class="border p-1 flex-1 rounded focus:ring focus:ring-black-300 outline-none flex-1"
+						bind:value={selectedEquipment.slot}
+					>
+						{#each slots as s}
+							<option value={s}>{s}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="flex flex-row gap-2">
+					<span class="font-semibold lg:w-64">Level:</span>
+					<input
+						class="border p-1 rounded w-16"
+						type="number"
+						readonly
+						bind:value={selectedEquipment.level}
+					/>
+					<input
+						class="border p-1 flex-5 rounded"
+						type="range"
+						step="5"
+						min="0"
+						max="60"
+						bind:value={selectedEquipment.level}
+					/>
+				</div>
+
+				<div></div>
+
+				{#each Object.entries(selectedEquipment.stats) as [key, value]}
 					<div class="flex flex-row gap-2">
 						<!-- Dropdown -->
 						<select
@@ -206,7 +285,7 @@
 						<input
 							type="number"
 							class="border rounded-xl px-3 py-2 w-24 text-right focus:ring focus:ring-blue-300 outline-none"
-							bind:value={selectedMonster.stats[key]}
+							bind:value={selectedEquipment.stats[key]}
 						/>
 
 						<!-- Bouton delete -->
@@ -262,14 +341,14 @@
 				<div class="flex flex-col gap-2">
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-48 lg:w-32">Name:</span>
-						<span>{selectedMonster.name}</span>
+						<span>{selectedEquipment.name}</span>
 					</div>
 					<div class="flex flex-row gap-2">
 						<span class="font-semibold w-48 lg:w-32">Description:</span>
-						<span>{selectedMonster.description}</span>
+						<span>{selectedEquipment.description}</span>
 					</div>
 					<!-- Les 6 premiers éléments -->
-					{#each Object.entries(selectedMonster.stats).filter( ([key]) => key.includes('Base') ) as [key, value]}
+					{#each Object.entries(selectedEquipment.stats).filter( ([key]) => key.includes('Base') ) as [key, value]}
 						{#if value > 0}
 							<div class="flex flex-row gap-2">
 								<span class="font-semibold w-48 lg:w-32">{key}:</span>
@@ -286,7 +365,7 @@
 
 				<div class="flex flex-col gap-2">
 					<!-- Le reste des éléments filtrés -->
-					{#each Object.entries(selectedMonster.stats).filter(([key]) => !key.includes('Base')) as [key, value]}
+					{#each Object.entries(selectedEquipment.stats).filter(([key]) => !key.includes('Base')) as [key, value]}
 						{#if value > 0}
 							<div class="flex flex-row gap-2">
 								<span class="font-semibold w-48">{key}:</span>
@@ -319,15 +398,15 @@
 			<div class="flex justify-end gap-4 mt-6">
 				<button
 					class="px-4 py-2 bg-red-500 text-white rounded cursor-pointer hover:bg-red-600"
-					on:click={deleteMonster}
+					on:click={deleteEquipment}
 				>
 					Supprimer
 				</button>
-				{#if selectedMonster.api_id !== '-1'}
+				{#if selectedEquipment.api_id !== '-1'}
 					<button
 						class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={!isAllGood}
-						on:click={updateMonster}
+						on:click={updateEquipment}
 					>
 						Update
 					</button>
@@ -335,7 +414,7 @@
 					<button
 						class="px-4 py-2 bg-green-500 text-white rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={!isAllGood}
-						on:click={createMonster}
+						on:click={createEquipment}
 					>
 						Create
 					</button>

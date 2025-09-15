@@ -6,6 +6,7 @@
 	import { validateSector } from './SectorValidator';
 	import type { ValidationError } from './SectorValidator';
 	import { RangeSlider } from 'svelte-range-slider-pips';
+	import { searchQuery } from '$lib/stores/search';
 
 	type Sector = {
 		api_id: string;
@@ -145,13 +146,14 @@
 		};
 	}
 
+	$: filteredItems = sectors.filter((e: Sector) => e.name.toUpperCase().includes($searchQuery.toUpperCase()));
 	$: errors = validateSector(selectedSector);
 	$: isAllGood = errors.length === 0;
 </script>
 
 <!-- Grid des sector -->
 <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 p-4">
-	{#each sectors as sector}
+	{#each filteredItems as sector}
 		<button
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
 			on:click={() => selectSector(sector)}

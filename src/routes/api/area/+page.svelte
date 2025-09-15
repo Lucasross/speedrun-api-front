@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import api from '../../../lib/api'; // ton axios configuré
 	import { isAuthenticated } from '$lib/stores/auth';
+	import { searchQuery } from '$lib/stores/search';
 
 	type Area = {
 		api_id: string;
@@ -99,12 +100,13 @@
 		isDragging = false;
 	}
 
+	$: filteredItems = areas.filter((e: Area) => e.name.toUpperCase().includes($searchQuery.toUpperCase()));
 	$: displayNames = true;
 </script>
 
 <!-- Grid des areas -->
 <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 p-4">
-	{#each areas as area}
+	{#each filteredItems as area}
 		<button
 			class="p-4 bg-blue-100 rounded cursor-pointer hover:bg-green-200 transition"
 			on:click={() => selectArea(area)}
@@ -196,7 +198,10 @@
 			<!-- End Col -->
 			<!-- World map -->
 			<div class="mt-5">
-				<p>The blue circle represent the direct neighbour. If there is none, the closest area is selected to be the only neighbor.</p>
+				<p>
+					The blue circle represent the direct neighbour. If there is none, the closest area is
+					selected to be the only neighbor.
+				</p>
 				<div class="">
 					<span>Display names:</span>
 					<input type="checkbox" class="border p-1 rounded" bind:checked={displayNames} />
@@ -221,7 +226,7 @@
 						border-radius: 50%; transform: translate(-50%, -50%);"
 				></div>
 				<!-- Others area -->
-				{#each areas.filter(area => area !== selectedArea) as area}
+				{#each areas.filter((area) => area !== selectedArea) as area}
 					<div
 						class="absolute w-3 h-3 bg-yellow-500 rounded-full"
 						style="left: {area.position_x * 100}%; top: {area.position_y *
